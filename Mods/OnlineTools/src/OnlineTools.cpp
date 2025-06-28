@@ -114,8 +114,8 @@ void OnlineTools::OnEngineInitialized() {
     m_UseHttp = GetSettingBool("online", "use_http", false);
     m_AlwaysSendAuth = GetSettingBool("online", "always_send_auth_header", false);
     m_CertPinBypass = GetSettingBool("online", "bypass_cert_pinning", false);
+    m_EnableDynRes = GetSettingBool("online", "enable_dynamic_resources", false);
     m_OptionalDynRes = GetSettingBool("online", "optional_dynamic_resources", false);
-    m_DisableDynRes = GetSettingBool("online", "disable_dynamic_resources", true);
 
     // Load saved domains
     m_DefaultDomain = GetSettingInt("domains", "default", -1);
@@ -126,11 +126,11 @@ void OnlineTools::OnEngineInitialized() {
     // Apply settings
     if (m_AlwaysSendAuth) PatchAuthHeaderChecks();
 
+    if (m_EnableDynRes)
+        Functions::ZConfigCommand_ExecuteCommand->Call("OnlineResources_Disable", "0");
+
     if (m_OptionalDynRes)
         Functions::ZConfigCommand_ExecuteCommand->Call("OnlineResources_ForceOfflineOnFailure", "0");
-
-    if (m_DisableDynRes)
-        Functions::ZConfigCommand_ExecuteCommand->Call("OnlineResources_Disable", "1");
 
     if (m_DefaultDomain >= 0 && m_Domains.size() > m_DefaultDomain)
         Functions::ZConfigCommand_ExecuteCommand->Call(
@@ -180,17 +180,17 @@ inline void OnlineTools::UpdateHeaders() {
     m_AlwaysSendAuth ? PatchAuthHeaderChecks() : RestoreAuthHeaderChecks();
 }
 
+inline void OnlineTools::UpdateEnableDynRes() {
+    SetSettingBool("online", "enable_dynamic_resources", m_EnableDynRes);
+    Functions::ZConfigCommand_ExecuteCommand->Call(
+        "OnlineResources_Disable", m_EnableDynRes ? "0" : "1"
+    );
+}
+
 inline void OnlineTools::UpdateDynRes() {
     SetSettingBool("online", "optional_dynamic_resources", m_OptionalDynRes);
     Functions::ZConfigCommand_ExecuteCommand->Call(
         "OnlineResources_ForceOfflineOnFailure", m_OptionalDynRes ? "0" : "1"
-    );
-}
-
-inline void OnlineTools::UpdateDisableDynRes() {
-    SetSettingBool("online", "disable_dynamic_resources", m_DisableDynRes);
-    Functions::ZConfigCommand_ExecuteCommand->Call(
-        "OnlineResources_Disable", m_DisableDynRes ? "0" : "1"
     );
 }
 
@@ -237,16 +237,16 @@ void OnlineTools::SettingsMenu() {
             "Allows you to decrypt SSL traffic between the game and a server if you use a proxy."
         );
 
+        if (ImGui::Checkbox("Enable Online Dynamic Resources", &m_EnableDynRes))
+            UpdateEnableDynRes();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(
+            "Enables loading dynamic resources packages, necessary for Peacock localisation"
+        );
+
         if (ImGui::Checkbox("Make Dynamic Resources Optional", &m_OptionalDynRes))
             UpdateDynRes();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip(
             "Makes the dynamic resources package optional, meaning if a server doesn't have it, you won't be forced offline."
-        );
-
-        if (ImGui::Checkbox("Disable Dynamic Resources", &m_DisableDynRes))
-            UpdateDisableDynRes();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip(
-            "Disables loading dynamic resources packages"
         );
 
         // Domains
@@ -354,7 +354,7 @@ void OnlineTools::HelpMenu() {
             m_AlwaysSendAuth = true;
             m_CertPinBypass = true;
             m_OptionalDynRes = true;
-            m_DisableDynRes = false;
+            m_EnableDynRes = true;
 
             m_Domains = {"localhost", "gm.hitmaps.com", "ghostmode.rdil.rocks"};
 
