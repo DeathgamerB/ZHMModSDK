@@ -23,6 +23,7 @@ private:
     inline void SaveCertPin();
     inline void UpdateHeaders();
     inline void UpdateDynRes();
+    inline void UpdateDisableDynRes();
     inline void SaveDomains();
 
     // Hooks
@@ -42,6 +43,7 @@ private:
     bool m_AlwaysSendAuth = false;
     bool m_CertPinBypass = false;
     bool m_OptionalDynRes = false;
+    bool m_DisableDynRes = false;
 
     // Saved Domains
     int64_t m_DefaultDomain = -1;

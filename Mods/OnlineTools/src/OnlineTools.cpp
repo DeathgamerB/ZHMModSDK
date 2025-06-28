@@ -115,6 +115,7 @@ void OnlineTools::OnEngineInitialized() {
     m_AlwaysSendAuth = GetSettingBool("online", "always_send_auth_header", false);
     m_CertPinBypass = GetSettingBool("online", "bypass_cert_pinning", false);
     m_OptionalDynRes = GetSettingBool("online", "optional_dynamic_resources", false);
+    m_DisableDynRes = GetSettingBool("online", "disable_dynamic_resources", true);
 
     // Load saved domains
     m_DefaultDomain = GetSettingInt("domains", "default", -1);
@@ -127,6 +128,9 @@ void OnlineTools::OnEngineInitialized() {
 
     if (m_OptionalDynRes)
         Functions::ZConfigCommand_ExecuteCommand->Call("OnlineResources_ForceOfflineOnFailure", "0");
+
+    if (m_DisableDynRes)
+        Functions::ZConfigCommand_ExecuteCommand->Call("OnlineResources_Disable", "1");
 
     if (m_DefaultDomain >= 0 && m_Domains.size() > m_DefaultDomain)
         Functions::ZConfigCommand_ExecuteCommand->Call(
@@ -183,6 +187,13 @@ inline void OnlineTools::UpdateDynRes() {
     );
 }
 
+inline void OnlineTools::UpdateDisableDynRes() {
+    SetSettingBool("online", "disable_dynamic_resources", m_DisableDynRes);
+    Functions::ZConfigCommand_ExecuteCommand->Call(
+        "OnlineResources_Disable", m_DisableDynRes ? "0" : "1"
+    );
+}
+
 inline void OnlineTools::SaveDomains() {
     SetSetting("domains", "saved", Join(m_Domains, DOMAIN_DELIMETER));
 }
@@ -230,6 +241,12 @@ void OnlineTools::SettingsMenu() {
             UpdateDynRes();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip(
             "Makes the dynamic resources package optional, meaning if a server doesn't have it, you won't be forced offline."
+        );
+
+        if (ImGui::Checkbox("Disable Dynamic Resources", &m_DisableDynRes))
+            UpdateDisableDynRes();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(
+            "Disables loading dynamic resources packages"
         );
 
         // Domains
@@ -337,6 +354,7 @@ void OnlineTools::HelpMenu() {
             m_AlwaysSendAuth = true;
             m_CertPinBypass = true;
             m_OptionalDynRes = true;
+            m_DisableDynRes = false;
 
             m_Domains = {"localhost", "gm.hitmaps.com", "ghostmode.rdil.rocks"};
 
